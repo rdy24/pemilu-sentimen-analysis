@@ -5,61 +5,35 @@
         <div class="container-fluid">
 
           <!-- Page Heading -->
-          <h1 class="h3 mb-2 text-gray-800">Tables</h1>
-          <p class="mb-4">DataTables is a third party plugin that is used to generate the demo table below. For more information about DataTables, please visit the <a target="_blank" href="https://datatables.net">official DataTables documentation</a>.</p>
+          <h1 class="h3 mb-2 text-gray-800">Preprocessing</h1>
+          <p class="mb-4">Pastikan data sudah terimport jika belum silahkan import <a href="training-data">disini</a></p>
+          <p class="mb-4">Apabila sudah import namun data hasil preprocessing klik tombol proses <br> <a class="btn btn-primary mt-2" href="preprocessing-proses">Proses</a></p>
+
 
           <!-- DataTales Example -->
           <div class="card shadow mb-4">
             <div class="card-header py-3">
-              <h6 class="m-0 font-weight-bold text-primary">DataTables Example</h6>
+              <h6 class="m-0 font-weight-bold text-primary">Hasil Preprocessing</h6>
             </div>
             <div class="card-body">
               <div class="table-responsive">
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                   <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Position</th>
-                      <th>Office</th>
-                      <th>Age</th>
-                      <th>Start date</th>
-                      <th>Salary</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Jonas Alexander</td>
-                      <td>Developer</td>
-                      <td>San Francisco</td>
-                      <td>30</td>
-                      <td>2010/07/14</td>
-                      <td>$86,500</td>
-                    </tr>
-                    <tr>
-                      <td>Shad Decker</td>
-                      <td>Regional Director</td>
-                      <td>Edinburgh</td>
-                      <td>51</td>
-                      <td>2008/11/13</td>
-                      <td>$183,000</td>
-                    </tr>
-                    <tr>
-                      <td>Michael Bruce</td>
-                      <td>Javascript Developer</td>
-                      <td>Singapore</td>
-                      <td>29</td>
-                      <td>2011/06/27</td>
-                      <td>$183,000</td>
-                    </tr>
-                    <tr>
-                      <td>Donna Snider</td>
-                      <td>Customer Support</td>
-                      <td>New York</td>
-                      <td>27</td>
-                      <td>2011/01/25</td>
-                      <td>$112,000</td>
-                    </tr>
-                  </tbody>
+                          <tr>
+                            <th>No</th>
+                            <th>Teks</th>
+                            <th>Hasil</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for row in data %}
+                          <tr>
+                              <td>{{ loop.index }}</td>
+                              <td>{{ row.teks }}</td>
+                              <td>{{ row.hasil }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
                 </table>
               </div>
             </div>
