@@ -5,6 +5,7 @@ import pandas as pd
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
 
 # cleaning text
@@ -33,7 +34,8 @@ def tokenizing(text):
 
 # stopword removal
 def stopword_removal(text):
-    stop_words = set(stopwords.words('indonesian'))
+    factory = StopWordRemoverFactory()
+    stopword = factory.create_stop_word_remover()
     more_stopword = [
         "ah", "u", "az", "gp", "maniaaaa", "unk", "yaa", "all", "in", "md", "waahh", "halooo", "bro", "x", "e", "ktp",
         "kwkw", "se", "adi", "wni", "n", "wew", "k", "tps", "tu", "psi", "pbb", "jauuuuuhhhh", "anka",
@@ -57,7 +59,7 @@ def stopword_removal(text):
         "dp", "rb", "hahahahahahahahah", "haam", "sos", "m", "ak", "pt", "ma", "nw", "ugm", "pj", "asn", "fyi", "uns",
         "²ðÿ", "ðÿ", "âœœ", "megagiliran", "thm menteri", "tooo", "nee", "frp", "nelikung", "lskux", "guys"
     ]
-    stop_words.update(more_stopword)
+    stop_words = factory.get_stop_words() + more_stopword
     return [word for word in text if word not in stop_words]
 
 
