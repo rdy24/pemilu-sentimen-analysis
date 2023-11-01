@@ -1,21 +1,26 @@
 #!/usr/bin/env python
 import pickle
 
-from flask import Flask, url_for, render_template, request, jsonify, redirect
+from flask import Flask, url_for, render_template, request, jsonify, redirect, flash, g
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import jinja2.exceptions
 import pandas as pd
 import mysql.connector
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from training_models_module import TrainingModel, PreprocessingModel, TFIDFModel
+from training_models_module import TrainingModel, PreprocessingModel, TFIDFModel, UserModel
 from preprocessing import cleaning_text, case_folding, tokenizing, stopword_removal, stemming, normalisasi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-import re
+from imblearn.over_sampling import SMOTE
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 # Database connection
 db_user = 'root'
@@ -37,19 +42,91 @@ session = Session()
 
 
 @app.route('/')
-def index():
+def home():
+    return redirect(url_for('login'))
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return session.query(UserModel).get(int(user_id))
+
+@app.before_request
+def before_request():
+    g.name = None
+    g.role = None
+    if current_user.is_authenticated:
+        g.name = current_user.nama
+        g.role = current_user.role
+
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:  # Mengecek apakah pengguna sudah login
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = session.query(UserModel).filter_by(email=email).first()
+
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            if user.role == 'admin':
+                return redirect(url_for('dashboard'))
+            elif user.role == 'user':
+                return redirect(url_for('dashboard'))
+        else:
+            flash('Login gagal. Periksa kembali username dan password Anda.', 'danger')
+    return render_template('login.html')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:  # Mengecek apakah pengguna sudah login
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        nama = request.form.get('nama')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        if not nama or not email or not password:
+            flash('Semua kolom harus diisi.', 'danger')
+        else:
+            hashed_password = generate_password_hash(password)
+            user = UserModel(nama=nama, password=hashed_password, email=email)
+            session.add(user)
+            session.commit()
+            flash('Akun Anda telah dibuat! Silakan masuk.', 'success')
+            return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
     countTraining = session.query(TrainingModel).count()
     return render_template('index.html', countTraining=countTraining)
 
 
 @app.route('/training-data')
+@login_required
 def training_data():
+    if current_user.role == 'user':
+        return redirect(url_for('dashboard'))
     data = session.query(TrainingModel).all()
     return render_template('trainingData.html', data=data)
 
 
 @app.route('/upload-data-training', methods=['POST'])
+@login_required
 def upload_data_training():
+    if current_user.role == 'user':
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         if 'file' not in request.files:
             return jsonify({'error': 'File CSV tidak ditemukan'})
@@ -83,6 +160,7 @@ def upload_data_training():
 
 
 @app.route('/preprocessing-proses')
+@login_required
 def preprocessing_proses():
     data = session.query(TrainingModel).all()
     session.execute(text('TRUNCATE TABLE preprocessing'))
@@ -104,12 +182,14 @@ def preprocessing_proses():
 
 
 @app.route('/preprocessing')
+@login_required
 def preprocessing():
     data = session.query(PreprocessingModel).all()
     return render_template('preprocessing.html', data=data)
 
 
 @app.route('/tfidf-proses')
+@login_required
 def tfidf_proses():
     session.execute(text('TRUNCATE TABLE tfidf'))
     session.commit()
@@ -184,6 +264,7 @@ def tfidf_proses1():
 
     return jsonify(tfidf_data)
 
+
 @app.route('/tfidf-proses2')
 def tfidf_proses2():
     data = session.query(PreprocessingModel).all()
@@ -211,45 +292,62 @@ def tfidf_proses2():
 
     return jsonify(tfidf_results)
 
-@app.route('/klasifikasisvm')
+
+@app.route('/klasifikasi-training')
+@login_required
 def klasifikasisvm():
     # Ambil data dari database
     preprocessingData = session.query(PreprocessingModel).all()
 
-    id = [item.id for item in preprocessingData]
     teks = [item.teks for item in preprocessingData]
     corpus = [item.hasil for item in preprocessingData]
     labels = [item.label for item in preprocessingData]
 
     # Perbarui label 'Kebencian' menjadi -1 dan 'Non-Kebencian' menjadi 1
-    labels = [-1 if label == 'Kebencian' else 1 for label in labels]
+    labels = [1 if label == 'Non-Kebencian' else -1 for label in labels]
 
-    # Hitung TF-IDF
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
 
-    # Proses pembuatan model Klasifikasi SVM LINEAR
+    with open('tfidf_vectorizer.pkl', 'wb') as tfidf_vectorizer_file:
+        pickle.dump(tfidf_vectorizer, tfidf_vectorizer_file)
+
+    # Split the resampled data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(tfidf_matrix, labels, test_size=0.2, random_state=0)
+
+    print(X_test, y_test)
+
+    # Train the SVM model on the resampled data
     linear = SVC(kernel="linear")
-    linear.fit(tfidf_matrix, labels)
-    hasil_linear = linear.predict(tfidf_matrix)
+    model = linear.fit(X_train, y_train)
 
-    # Proses pembuatan model Klasifikasi SVM RBF
-    rbf = SVC(kernel="rbf")
-    rbf.fit(tfidf_matrix, labels)
-    hasil_rbf = rbf.predict(tfidf_matrix)
+    # Menyimpan model SVM linear ke dalam file
+    with open('svm_linear_model.pkl', 'wb') as model_file:
+        pickle.dump(model, model_file)
 
-    result = []
+    # Memuat kembali model yang telah disimpan
+    with open('svm_linear_model.pkl', 'rb') as model_file:
+        loaded_linear_model = pickle.load(model_file)
 
-    for i in range(len(teks)):
-        result.append({
-            'id': id[i],
+    # buka file tfidf vectorizer
+    with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
+        loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
+
+    # Transform the training data using the loaded TF-IDF vectorizer
+    X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
+
+    # Predict on the training data using the loaded SVM model
+    hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+
+    data = []
+    for i in range(len(labels)):
+        data.append({
             'teks': teks[i],
-            'label_asli': "Kebencian" if labels[i] == -1 else 'Non-Kebencian',
-            'hasil_klasifikasi_linear': "Kebencian" if hasil_linear[i] == -1 else 'Non-Kebencian',
-            'hasil_klasifikasi_rbf': "Kebencian" if hasil_rbf[i] == -1 else 'Non-Kebencian'
+            'label': "Kebencian" if labels[i] == -1 else "Non-Kebencian",
+            'hasil': "Kebencian" if hasil_linear_train[i] == -1 else "Non-Kebencian"
         })
 
-    return jsonify(result)
+    return render_template('klasifikasiTraining.html', data=data)
 
 
 @app.route('/klasifikasisvm1')
@@ -261,25 +359,36 @@ def klasifikasisvm1():
     labels = [item.label for item in preprocessingData]
 
     # Perbarui label 'Kebencian' menjadi -1 dan 'Non-Kebencian' menjadi 1
-    labels = [-1 if label == 'Kebencian' else 1 for label in labels]
+    labels = [1 if label == 'Non-Kebencian' else -1 for label in labels]
 
-    # Hitung TF-IDF
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
 
-    # Bagi data menjadi data pelatihan (80%) dan data pengujian (20%)
+    # Apply SMOTE to balance the dataset
+    smote = SMOTE(random_state=0)
+    X_resampled, y_resampled = smote.fit_resample(tfidf_matrix, labels)
+
+    # count y_resampled if 1 and -1
+    # print(X_resampled, y_resampled)
+    # print(y_resampled.count(1))
+    # print(y_resampled.count(-1))
+
+    # print("before resample")
+    # print(labels.count(1))
+    # print(labels.count(-1))
+
+    # Split the resampled data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(tfidf_matrix, labels, test_size=0.2, random_state=0)
 
-    with open('tfidf_vectorizer.pkl', 'wb') as tfidf_vectorizer_file:
-        pickle.dump(tfidf_vectorizer, tfidf_vectorizer_file)
+    print(X_test, y_test)
 
-    # Proses pembuatan model Klasifikasi SVM LINEAR
+    # Train the SVM model on the resampled data
     linear = SVC(kernel="linear")
-    linear.fit(X_train, y_train)
+    model = linear.fit(X_train, y_train)
 
     # Menyimpan model SVM linear ke dalam file
     with open('svm_linear_model.pkl', 'wb') as model_file:
-        pickle.dump(linear, model_file)
+        pickle.dump(model, model_file)
 
     # Memuat kembali model yang telah disimpan
     with open('svm_linear_model.pkl', 'rb') as model_file:
@@ -295,13 +404,12 @@ def klasifikasisvm1():
     f1 = f1_score(y_test, hasil_linear)
     cm = confusion_matrix(y_test, hasil_linear)
 
-    # Siapkan data teks dan label untuk respons JSON
     data = []
     for i in range(len(y_test)):
         data.append({
             'teks': corpus[i],
-            'label_asli': 'Kebencian' if y_test[i] == -1 else 'Non-Kebencian',
-            'hasil_linear': 'Kebencian' if hasil_linear[i] == -1 else 'Non-Kebencian'
+            'label_asli': y_test[i],
+            'hasil_linear': hasil_linear[i]
         })
 
     # Siapkan respons JSON
@@ -316,11 +424,75 @@ def klasifikasisvm1():
         }
     }
 
-    return jsonify(response)
+    # return jsonify(response)
+    return 'sukses'
 
-@app.route('/testing-data')
-def testing_data():
-    teks = "pemimpinnya bodoh ngapain milih orang bodoh"
+
+@app.route('/klasifikasisvm2')
+def klasifikasisvm2():
+    # Ambil data dari database
+    preprocessingData = session.query(PreprocessingModel).all()
+
+    corpus = [item.hasil for item in preprocessingData]
+    labels = [item.label for item in preprocessingData]
+
+    # Perbarui label 'Kebencian' menjadi -1 dan 'Non-Kebencian' menjadi 1
+    labels = [1 if label == 'Non-Kebencian' else -1 for label in labels]
+
+    # Load the TF-IDF vectorizer and SVM model
+    with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
+        loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
+
+    with open('svm_linear_model.pkl', 'rb') as model_file:
+        loaded_linear_model = pickle.load(model_file)
+
+    # Transform the training data using the loaded TF-IDF vectorizer
+    X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
+
+    # Predict on the training data using the loaded SVM model
+    hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+
+    # Calculate performance metrics on the training data
+    accuracy_train = accuracy_score(labels, hasil_linear_train)
+    precision_train = precision_score(labels, hasil_linear_train)
+    recall_train = recall_score(labels, hasil_linear_train)
+    f1_train = f1_score(labels, hasil_linear_train)
+    cm_train = confusion_matrix(labels, hasil_linear_train)
+
+    # Prepare data for JSON response
+    data_train = []
+    for i in range(len(corpus)):
+        data_train.append({
+            'teks': corpus[i],
+            'label_asli': 'Kebencian' if labels[i] == -1 else 'Non-Kebencian',
+            'hasil_linear_train': 'Kebencian' if hasil_linear_train[i] == -1 else 'Non-Kebencian'
+        })
+
+    # Prepare JSON response for training data
+    response_train = {
+        'data_train': data_train,
+        'metrics_train': {
+            'accuracy_train': accuracy_train,
+            'precision_train': precision_train,
+            'recall_train': recall_train,
+            'f1_train': f1_train,
+            'confusion_matrix_train': cm_train.tolist()
+        }
+    }
+
+    return jsonify(response_train)
+
+
+@app.route('/cek-kalimat')
+@login_required
+def cek_kalimat():
+    # get query string
+    teks = request.args.get('kalimat')
+
+    if teks is None:
+        return render_template('cekKalimat.html')
+
+    # teks = "pemimpinnya pintar ngapain milih orang pintar yang bisa memimpin negara ini dengan baik"
     cleaned = cleaning_text(teks)
     lowercased = case_folding(cleaned)
     tokenized = tokenizing(lowercased)
@@ -338,14 +510,19 @@ def testing_data():
 
     hasil_linear = loaded_linear_model.predict(loaded_tfidf_vectorizer.transform([preprocessed_text]))
 
-    return jsonify({
-        'teks': teks,
-        'preprocessed_text': preprocessed_text,
-        'hasil_linear': 'Kebencian' if hasil_linear[0] == -1 else 'Non-Kebencian'
-    })
+    hasil = "Kebencian" if hasil_linear[0] == -1 else 'Non-Kebencian'
+
+    # return jsonify({
+    #     'teks': teks,
+    #     'preprocessed_text': preprocessed_text,
+    #     'hasil_linear': 'Kebencian' if hasil_linear[0] == -1 else 'Non-Kebencian'
+    # })
+
+    return render_template('cekKalimat.html', teks=teks, preprocessed_text=preprocessed_text, hasil=hasil)
 
 
 @app.route('/tfidf')
+@login_required
 def tfidf():
     data = session.query(TFIDFModel).all()
     tfidf = []
@@ -361,6 +538,12 @@ def tfidf():
         )
     return jsonify(tfidf)
     # return render_template('tfidf.html', data=data)
+
+
+@app.route('/testing-data')
+@login_required
+def testing_data():
+    return render_template('testingData.html')
 
 
 @app.errorhandler(jinja2.exceptions.TemplateNotFound)

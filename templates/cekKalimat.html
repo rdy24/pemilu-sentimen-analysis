@@ -1,0 +1,42 @@
+{% extends "base.html" %} {% block title %}Sample{% endblock %}
+{% block content %}
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+          <!-- Page Heading -->
+          <h1 class="h3 mb-2 text-gray-800">Cek Kalimat</h1>
+          <form action="" class="mb-3">
+              <input type="text" class="form-control" name="kalimat" value="{{ teks }}">
+                <button type="submit" class="btn btn-primary mt-2">Cek</button>
+          </form>
+
+          <!-- DataTales Example -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Hasil</h6>
+            </div>
+            <div class="card-body">
+                <p>Kalimat : {{ teks }} </p>
+                <p>Preprosessing : {{ preprocessed_text }} </p>
+                <p>Hasil : {{ hasil }} </p>
+            </div>
+          </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+      </div>
+      <!-- End of Main Content -->
+
+{% endblock %}
+
+{% block js %}
+    {{ super() }}
+    <!-- Page level plugins -->
+    <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js')}}"></script>
+    <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js')}}"></script>
+
+    <!-- Page level custom scripts -->
+    <script src="{{ url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+{% endblock %}

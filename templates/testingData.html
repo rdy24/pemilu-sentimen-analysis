@@ -1,0 +1,72 @@
+{% extends "base.html" %} {% block title %}Sample{% endblock %} 
+{% block content %}
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+          <!-- Page Heading -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Upload Data</h6>
+            </div>
+            <div class="card-body">
+              <p>File yang dapat diupload hanya file berformat csv dengan kolom "Teks".</p>
+
+              <form enctype="multipart/form-data" method="POST" action="upload-data-testing">
+                <input type="file" name="file">
+                <div class="mt-3">
+                    <button type="submit" name="" value="upload csv" class="btn btn-primary">Submit</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- DataTales Example -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Data Testing</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-end">
+                    <a href="preprocessing-proses" class="btn btn-primary">Preprosessing</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                      <thead>
+                          <tr>
+                            <th>No</th>
+                            <th>Teks</th>
+                            <th>Label</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+<!--                          {% for row in data %}-->
+<!--                          <tr>-->
+<!--                              <td>{{ loop.index }}</td>-->
+<!--                              <td>{{ row.teks }}</td>-->
+<!--                              <td>{{ row.label }}</td>-->
+<!--                              <td>{{ row.sosmed }}</td>-->
+<!--                          </tr>-->
+<!--                          {% endfor %}-->
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+          </div>
+        </div>
+        <!-- /.container-fluid -->
+
+      </div>
+      <!-- End of Main Content -->
+
+{% endblock %}
+
+{% block js %}
+    {{ super() }}
+    <!-- Page level plugins -->
+    <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js')}}"></script>
+    <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js')}}"></script>
+
+    <!-- Page level custom scripts -->
+    <script src="{{ url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+{% endblock %}

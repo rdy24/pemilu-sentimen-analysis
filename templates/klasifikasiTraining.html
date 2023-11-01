@@ -1,0 +1,60 @@
+{% extends "base.html" %} {% block title %}Sample{% endblock %}
+{% block content %}
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+          <!-- Page Heading -->
+          <h1 class="h3 mb-2 text-gray-800">Preprocessing</h1>
+          <p class="mb-4">Pastikan data sudah terimport jika belum silahkan import <a href="training-data">disini</a></p>
+          <p class="mb-4">Apabila sudah import namun data hasil preprocessing klik tombol proses <br> <a class="btn btn-primary mt-2" href="preprocessing-proses">Proses</a></p>
+
+
+          <!-- DataTales Example -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Hasil Preprocessing</h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                  <thead>
+                          <tr>
+                            <th>No</th>
+                            <th>Teks</th>
+                            <th>Label</th>
+                            <th>Hasil Klasifikasi</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for row in data %}
+                          <tr>
+                              <td>{{ loop.index }}</td>
+                              <td>{{ row.teks }}</td>
+                              <td>{{ row.label }}</td>
+                              <td>{{ row.hasil }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- /.container-fluid -->
+
+      </div>
+      <!-- End of Main Content -->
+
+{% endblock %}
+
+{% block js %}
+    {{ super() }}
+    <!-- Page level plugins -->
+    <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js')}}"></script>
+    <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js')}}"></script>
+
+    <!-- Page level custom scripts -->
+    <script src="{{ url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+{% endblock %}

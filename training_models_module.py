@@ -29,3 +29,27 @@ class TFIDFModel(Base):
     tf = Column(Float)
     idf = Column(Float)
     tfidf = Column(Float)
+
+class UserModel(Base):
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    nama = Column(String)
+    email = Column(String)
+    password = Column(String)
+    role = Column(String, default='user')
+
+    # Implementasikan metode is_active
+    def is_active(self):
+        return True  # Gantilah dengan logika aktivasi pengguna yang sesuai
+
+    # Implementasikan metode get_id
+    def get_id(self):
+        return str(self.id)
+
+    def is_authenticated(self):
+        return True  # Atau sesuaikan dengan logika autentikasi yang sesuai
+
+    # Implementasikan metode __str__ (opsional, untuk debugging)
+    def __str__(self):
+        return f"User ID: {self.id}, Username: {self.username}, Role: {self.role}"
