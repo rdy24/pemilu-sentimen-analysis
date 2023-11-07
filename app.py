@@ -43,7 +43,8 @@ session = Session()
 
 @app.route('/')
 def home():
-    return redirect(url_for('login'))
+    return render_template('index.html')
+    # return redirect(url_for('login'))
 
 
 @login_manager.user_loader
@@ -110,7 +111,7 @@ def logout():
 @login_required
 def dashboard():
     countTraining = session.query(TrainingModel).count()
-    return render_template('index.html', countTraining=countTraining)
+    return render_template('dashboard.html', countTraining=countTraining)
 
 
 @app.route('/training-data')

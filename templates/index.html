@@ -1,87 +1,103 @@
-{% extends "base.html" %} {% block title %}Sample{% endblock %} 
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page - Deteksi Ujaran Kebencian</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
 
-        <!-- Begin Page Content -->
-        <div class="container-fluid">
+.header {
+    background-color: #3498db;
+    color: #fff;
+    text-align: center;
+    padding: 50px 0;
+}
 
-          <!-- Page Heading -->
-          <div class="d-sm-flex align-items-center justify-content-between mb-4">
-            <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-          </div>
+.header-title {
+    font-size: 36px;
+    margin-bottom: 10px;
+}
 
-          <!-- Content Row -->
-          <div class="row">
+.header-subtitle {
+    font-size: 24px;
+}
 
-            <!-- Earnings (Monthly) Card Example -->
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Data Training</div>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800">{{ countTraining }}</div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+.content {
+    margin: 20px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
-            <!-- Earnings (Monthly) Card Example -->
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Earnings (Annual)</div>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800">$215,000</div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+.content h3 {
+    font-size: 24px;
+    margin-top: 0;
+}
 
-            <!-- Earnings (Monthly) Card Example -->
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks</div>
-                      <div class="row no-gutters align-items-center">
-                        <div class="col-auto">
-                          <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">50%</div>
-                        </div>
-                        <div class="col">
-                          <div class="progress progress-sm mr-2">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+.content p {
+    font-size: 16px;
+    line-height: 1.6;
+}
 
-          </div>
+.cta {
+    text-align: center;
+    margin: 40px 0;
+}
 
-        </div>
-        <!-- /.container-fluid -->
+.cta-button {
+    background-color: #3498db;
+    color: #fff;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 18px;
+}
 
-      </div>
-      <!-- End of Main Content -->
+.footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 20px 0;
+}
 
-{% endblock %}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1 class="header-title">Deteksi Ujaran Kebencian</h1>
+        <h2 class="header-subtitle">Selamat datang!</h2>
+    </header>
 
-{% block js %}
-    {{ super() }}
-{% endblock %}
+    <section class="content">
+        <h3>Apa itu Ujaran Kebencian?</h3>
+        <p>
+            Ujaran kebencian adalah tindakan atau perilaku yang menyebarkan pesan negatif, berbahaya, atau merendahkan terhadap individu atau kelompok berdasarkan ras, agama, etnisitas, gender, orientasi seksual, atau karakteristik pribadi lainnya. Ini adalah bentuk diskriminasi yang dapat merusak hubungan sosial dan merugikan individu atau kelompok yang menjadi sasaran.
+        </p>
+    </section>
+
+    <section class="content">
+        <h3>Contoh Ujaran Kebencian</h3>
+        <p>
+            Contoh-contoh ujaran kebencian meliputi penghinaan, ancaman, atau penyebaran informasi palsu dengan tujuan merugikan orang lain. Sebagai contoh, "Kamu tidak pantas karena ras kamu" adalah sebuah contoh ujaran kebencian yang menargetkan individu berdasarkan rasnya.
+        </p>
+    </section>
+
+    <section class="cta">
+        <p>
+            <a href="dashboard.html" class="cta-button">Mulai Deteksi</a>
+        </p>
+    </section>
+
+    <footer class="footer">
+        <p>&copy; 2023 Nama Anda</p>
+    </footer>
+</body>
+</html>
