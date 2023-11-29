@@ -1,103 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Landing Page - Deteksi Ujaran Kebencian</title>
-    <style>
-        body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
-}
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Homepage</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+			integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+			crossorigin="anonymous"
+		/>
+		<style>
+			body {
+				font-family: "Poppins", sans-serif;
+			}
+			.bg-custom {
+				background-color: #189eff;
+			}
 
-.header {
-    background-color: #3498db;
-    color: #fff;
-    text-align: center;
-    padding: 50px 0;
-}
-
-.header-title {
-    font-size: 36px;
-    margin-bottom: 10px;
-}
-
-.header-subtitle {
-    font-size: 24px;
-}
-
-.content {
-    margin: 20px;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.content h3 {
-    font-size: 24px;
-    margin-top: 0;
-}
-
-.content p {
-    font-size: 16px;
-    line-height: 1.6;
-}
-
-.cta {
-    text-align: center;
-    margin: 40px 0;
-}
-
-.cta-button {
-    background-color: #3498db;
-    color: #fff;
-    padding: 15px 30px;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-    font-size: 18px;
-}
-
-.footer {
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    padding: 20px 0;
-}
-
-    </style>
-</head>
-<body>
-    <header class="header">
-        <h1 class="header-title">Deteksi Ujaran Kebencian</h1>
-        <h2 class="header-subtitle">Selamat datang!</h2>
-    </header>
-
-    <section class="content">
-        <h3>Apa itu Ujaran Kebencian?</h3>
-        <p>
-            Ujaran kebencian adalah tindakan atau perilaku yang menyebarkan pesan negatif, berbahaya, atau merendahkan terhadap individu atau kelompok berdasarkan ras, agama, etnisitas, gender, orientasi seksual, atau karakteristik pribadi lainnya. Ini adalah bentuk diskriminasi yang dapat merusak hubungan sosial dan merugikan individu atau kelompok yang menjadi sasaran.
-        </p>
-    </section>
-
-    <section class="content">
-        <h3>Contoh Ujaran Kebencian</h3>
-        <p>
-            Contoh-contoh ujaran kebencian meliputi penghinaan, ancaman, atau penyebaran informasi palsu dengan tujuan merugikan orang lain. Sebagai contoh, "Kamu tidak pantas karena ras kamu" adalah sebuah contoh ujaran kebencian yang menargetkan individu berdasarkan rasnya.
-        </p>
-    </section>
-
-    <section class="cta">
-        <p>
-            <a href="dashboard.html" class="cta-button">Mulai Deteksi</a>
-        </p>
-    </section>
-
-    <footer class="footer">
-        <p>&copy; 2023 Nama Anda</p>
-    </footer>
-</body>
+			.font-custom {
+				color: #189eff;
+			}
+		</style>
+	</head>
+	<body>
+		<nav class="navbar bg-custom">
+			<div class="container">
+				<span class="navbar-brand my-2 h1 text-white fw-bold">
+					Deteksi Ujaran Kebencian
+				</span>
+			</div>
+		</nav>
+		<div class="container mt-5">
+			<div class="row">
+				<div class="col-md-6">
+					<img
+						src="../static/img/hero.png"
+						class="img-fluid"
+						alt="Having Fun"
+					/>
+				</div>
+				<div class="col-md-6">
+					<h1 class="fw-bold font-custom mb-2">Ujaran Kebencian</h1>
+					<p class="lead">
+						Lorem Ipsum is simply dummy text of the printing and
+						typesetting industry. Lorem Ipsum has been the
+						industry's standard dummy text ever since the 1500s,
+						when an unknown printer took a galley of type and
+						scrambled it to make a type specimen book. It has
+						survived not only five centuries, but also the leap into
+						electronic typesetting, remaining essentially unchanged.
+					</p>
+					<a href="/login" class="btn btn-primary">Mulai</a>
+				</div>
+			</div>
+			<div class="row mt-5">
+				<h3 class="font-custom text-center fw-bold mb-4">
+					Contoh Ujaran Kebencian
+				</h3>
+				<div class="col-md-4">
+					<div class="card" style="width: 18rem">
+						<div class="card-body">
+							<h5 class="card-title">Card title</h5>
+							<h6 class="card-subtitle mb-2 text-body-secondary">
+								Card subtitle
+							</h6>
+							<p class="card-text">
+								Some quick example text to build on the card
+								title and make up the bulk of the card's
+								content.
+							</p>
+							<a href="#" class="card-link">Card link</a>
+							<a href="#" class="card-link">Another link</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="card" style="width: 18rem">
+						<div class="card-body">
+							<h5 class="card-title">Card title</h5>
+							<h6 class="card-subtitle mb-2 text-body-secondary">
+								Card subtitle
+							</h6>
+							<p class="card-text">
+								Some quick example text to build on the card
+								title and make up the bulk of the card's
+								content.
+							</p>
+							<a href="#" class="card-link">Card link</a>
+							<a href="#" class="card-link">Another link</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="card" style="width: 18rem">
+						<div class="card-body">
+							<h5 class="card-title">Card title</h5>
+							<h6 class="card-subtitle mb-2 text-body-secondary">
+								Card subtitle
+							</h6>
+							<p class="card-text">
+								Some quick example text to build on the card
+								title and make up the bulk of the card's
+								content.
+							</p>
+							<a href="#" class="card-link">Card link</a>
+							<a href="#" class="card-link">Another link</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<footer class="bg-custom py-4 mt-3">
+			<div class="text-center">
+				<span class="text-white fw-bold">
+					rdy24 ® 2023 All rights Received
+				</span>
+			</div>
+		</footer>
+		<script
+			src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+			integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+			crossorigin="anonymous"
+		></script>
+	</body>
 </html>

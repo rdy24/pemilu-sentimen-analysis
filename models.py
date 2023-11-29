@@ -53,3 +53,25 @@ class UserModel(Base):
     # Implementasikan metode __str__ (opsional, untuk debugging)
     def __str__(self):
         return f"User ID: {self.id}, Username: {self.username}, Role: {self.role}"
+
+class KlasifikasiTrainingModel(Base):
+    __tablename__ = 'klasifikasi_training'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    teks = Column(String)
+    label = Column(String)
+    hasil_klasifikasi = Column(String)
+
+class KlasifikasiTestingModel(Base):
+    __tablename__ = 'klasifikasi_testing'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    teks = Column(String)
+    hasil_klasifikasi = Column(String)
+
+class PrepocessingTestingModel(Base):
+    __tablename__ = 'preprocessing_testing'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    teks = Column(String)
+    hasil = Column(String)

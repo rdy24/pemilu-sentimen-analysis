@@ -8,7 +8,7 @@ import pandas as pd
 import mysql.connector
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from training_models_module import TrainingModel, PreprocessingModel, TFIDFModel, UserModel
+from models import TrainingModel, PreprocessingModel, TFIDFModel, UserModel, KlasifikasiTrainingModel
 from preprocessing import cleaning_text, case_folding, tokenizing, stopword_removal, stemming, normalisasi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
@@ -299,6 +299,7 @@ def tfidf_proses2():
 def klasifikasisvm():
     # Ambil data dari database
     preprocessingData = session.query(PreprocessingModel).all()
+    session.execute(text('TRUNCATE TABLE klasifikasi_training'))
 
     teks = [item.teks for item in preprocessingData]
     corpus = [item.hasil for item in preprocessingData]
@@ -315,8 +316,6 @@ def klasifikasisvm():
 
     # Split the resampled data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(tfidf_matrix, labels, test_size=0.2, random_state=0)
-
-    print(X_test, y_test)
 
     # Train the SVM model on the resampled data
     linear = SVC(kernel="linear")
@@ -339,6 +338,11 @@ def klasifikasisvm():
 
     # Predict on the training data using the loaded SVM model
     hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+
+    # save data to database
+    for i in range(len(labels)):
+        data = KlasifikasiTrainingModel(teks=teks[i], label=labels[i], hasil_klasifikasi=hasil_linear_train[i])
+        session.add(data)
 
     data = []
     for i in range(len(labels)):
@@ -545,6 +549,40 @@ def tfidf():
 @login_required
 def testing_data():
     return render_template('testingData.html')
+
+@app.route('/upload-data-testing', methods=['POST'])
+@login_required
+def upload_data_testing():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return jsonify({'error': 'File CSV tidak ditemukan'})
+
+        file = request.files['file']
+
+        if file and file.filename.endswith('.csv'):
+            try:
+                session.execute(text('TRUNCATE TABLE testing'))
+                session.execute(text('TRUNCATE TABLE preprocessing_testing'))
+                session.commit()
+                df = pd.read_csv(file)
+
+                if 'teks' in df.columns and 'label' in df.columns and 'sosmed' in df.columns:
+                    for _, row in df.iterrows():
+                        df.fillna('', inplace=True)
+                        # Membuat objek model dan menyimpannya ke database
+                        data = TestingModel(teks=row['teks'], label=row['label'], sosmed=row['sosmed'])
+                        session.add(data)
+
+                    session.commit()
+                    return redirect(url_for('testing_data'))
+                else:
+                    return jsonify({'error': 'Kolom "teks", "label", dan "sosmed" diperlukan dalam file CSV'})
+            except Exception as e:
+                return jsonify({'error': f'Error: {str(e)}'})
+        else:
+            return jsonify({'error': 'File harus berformat CSV'})
+    else:
+        return jsonify({'error': 'Metode HTTP tidak valid, hanya mendukung POST'})
 
 
 @app.errorhandler(jinja2.exceptions.TemplateNotFound)
