@@ -62,6 +62,14 @@ class KlasifikasiTrainingModel(Base):
     label = Column(String)
     hasil_klasifikasi = Column(String)
 
+class TestingModel(Base):
+    __tablename__ = 'testing'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    teks = Column(String)
+    preprocessing = Column(String)
+    hasil_klasifikasi = Column(String)
+
 class KlasifikasiTestingModel(Base):
     __tablename__ = 'klasifikasi_testing'
 
@@ -75,3 +83,12 @@ class PrepocessingTestingModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     teks = Column(String)
     hasil = Column(String)
+
+class ScrapingModel(Base):
+    __tablename__ = 'scraping_tweet'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    created_at = Column(String)
+    teks = Column(String)
+    preprocessing = Column(String)
+    hasil_klasifikasi = Column(String)

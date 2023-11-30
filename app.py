@@ -8,7 +8,7 @@ import pandas as pd
 import mysql.connector
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from models import TrainingModel, PreprocessingModel, TFIDFModel, UserModel, KlasifikasiTrainingModel
+from models import TrainingModel, PreprocessingModel, TFIDFModel, UserModel, KlasifikasiTrainingModel, TestingModel, PrepocessingTestingModel, ScrapingModel
 from preprocessing import cleaning_text, case_folding, tokenizing, stopword_removal, stemming, normalisasi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
@@ -16,6 +16,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from imblearn.over_sampling import SMOTE
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -182,7 +184,7 @@ def preprocessing_proses():
     return redirect(url_for('preprocessing'))
 
 
-@app.route('/preprocessing')
+@app.route('/preprocessing-training')
 @login_required
 def preprocessing():
     data = session.query(PreprocessingModel).all()
@@ -548,7 +550,9 @@ def tfidf():
 @app.route('/testing-data')
 @login_required
 def testing_data():
-    return render_template('testingData.html')
+    data = session.query(TestingModel).all()
+
+    return render_template('testingData.html', data=data)
 
 @app.route('/upload-data-testing', methods=['POST'])
 @login_required
@@ -566,23 +570,130 @@ def upload_data_testing():
                 session.commit()
                 df = pd.read_csv(file)
 
-                if 'teks' in df.columns and 'label' in df.columns and 'sosmed' in df.columns:
+                if 'teks' in df.columns:
+                    preprocessed_texts = []
                     for _, row in df.iterrows():
                         df.fillna('', inplace=True)
-                        # Membuat objek model dan menyimpannya ke database
-                        data = TestingModel(teks=row['teks'], label=row['label'], sosmed=row['sosmed'])
+                        cleaned = cleaning_text(row['teks'])
+                        lowercased = case_folding(cleaned)
+                        tokenized = tokenizing(lowercased)
+                        normalized = normalisasi(tokenized)
+                        stopword_removed = stopword_removal(normalized)
+                        stemmed = stemming(stopword_removed)
+                        preprocessed_text = (" ").join(stemmed)
+                        preprocessed_texts.append(preprocessed_text)
+
+                    #add column
+                    df['preprocessed_text'] = preprocessed_texts
+
+                    corpus = [item for item in preprocessed_texts]
+
+                    # load model
+                    with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
+                        loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
+
+                    # Transform the training data using the loaded TF-IDF vectorizer
+                    X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
+
+                    # Memuat kembali model yang telah disimpan
+                    with open('svm_linear_model.pkl', 'rb') as model_file:
+                        loaded_linear_model = pickle.load(model_file)
+
+                    # Predict on the training data using the loaded SVM model
+                    hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+                    df['hasil'] = hasil_linear_train
+
+                    # truncate table
+                    session.execute(text('TRUNCATE TABLE testing'))
+                    # save data to database
+                    for _, row in df.iterrows():
+                        hasil = "Kebencian" if row['hasil'] == -1 else 'Non-Kebencian'
+                        data = TestingModel(teks=row['teks'], preprocessing=row['preprocessed_text'],hasil_klasifikasi=hasil)
                         session.add(data)
 
                     session.commit()
                     return redirect(url_for('testing_data'))
                 else:
-                    return jsonify({'error': 'Kolom "teks", "label", dan "sosmed" diperlukan dalam file CSV'})
+                    return jsonify({'error': 'Kolom "teks", diperlukan dalam file CSV'})
             except Exception as e:
                 return jsonify({'error': f'Error: {str(e)}'})
         else:
             return jsonify({'error': 'File harus berformat CSV'})
     else:
         return jsonify({'error': 'Metode HTTP tidak valid, hanya mendukung POST'})
+
+
+@app.route('/scrap-tweet', methods=['POST', 'GET'])
+@login_required
+def scrap_tweet():
+    if request.method == 'POST':
+        # Get user input
+        twitter_auth_token = '151174fc0bd66d4866e87950d73346c50013d4b7'
+        keyword = request.form['keyword']
+
+        search_keyword = f'{keyword} lang:id -filter:links -filter:replies'
+
+        now = datetime.datetime.now()
+        filename = f'{keyword}-{now.strftime("%Y-%m-%d-%H-%M-%S")}.csv'
+
+        # Run the tweet harvesting code
+        limit = 50
+        command = f'npx --yes tweet-harvest@2.2.8 -o "{filename}" -s "{search_keyword}" -l {limit} --token {twitter_auth_token}'
+        os.system(command)
+
+        file_path = f'tweets-data/{filename}'
+
+        # Read the CSV file into a Pandas DataFrame
+        df = pd.read_csv(file_path, delimiter=';')
+
+        selected_columns = df[['created_at', 'full_text']]
+
+        preprocessed_texts = []
+
+        # preprocessing
+        for _, row in selected_columns.iterrows():
+            df.fillna('', inplace=True)
+            cleaned = cleaning_text(row['full_text'])
+            lowercased = case_folding(cleaned)
+            tokenized = tokenizing(lowercased)
+            normalized = normalisasi(tokenized)
+            stopword_removed = stopword_removal(normalized)
+            stemmed = stemming(stopword_removed)
+            preprocessed_text = (" ").join(stemmed)
+            preprocessed_texts.append(preprocessed_text)
+
+        selected_columns['preprocessed_text'] = preprocessed_texts
+
+
+        # load model
+        with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
+            loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
+
+        with open('svm_linear_model.pkl', 'rb') as model_file:
+            loaded_linear_model = pickle.load(model_file)
+
+        corpus = [item for item in preprocessed_texts]
+        # predict
+        hasil_linear = loaded_linear_model.predict(loaded_tfidf_vectorizer.transform(corpus))
+
+        # add column
+        selected_columns['hasil'] = hasil_linear
+
+        # truncate table
+        session.execute(text('TRUNCATE TABLE scraping_tweet'))
+
+        # save data to database
+        for _, row in selected_columns.iterrows():
+            hasil = "Kebencian" if row['hasil'] == -1 else 'Non-Kebencian'
+            data = ScrapingModel(teks=row['full_text'], hasil_klasifikasi=hasil, created_at=row['created_at'], preprocessing=row['preprocessed_text'])
+            session.add(data)
+
+        session.commit()
+
+        return redirect(url_for('scrap_tweet'))
+
+    data = session.query(ScrapingModel).all()
+    return render_template('scrapTweet.html', data=data)
 
 
 @app.errorhandler(jinja2.exceptions.TemplateNotFound)
