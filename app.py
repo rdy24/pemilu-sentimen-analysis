@@ -8,7 +8,7 @@ import pandas as pd
 import mysql.connector
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from models import TrainingModel, PreprocessingModel, TFIDFModel, UserModel, KlasifikasiTrainingModel, TestingModel, PrepocessingTestingModel, ScrapingModel
+from models import db, TrainingModel, PreprocessingModel, TFIDFModel, UserModel, KlasifikasiTrainingModel, TestingModel, PrepocessingTestingModel, ScrapingModel
 from preprocessing import cleaning_text, case_folding, tokenizing, stopword_removal, stemming, normalisasi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
@@ -18,8 +18,12 @@ from imblearn.over_sampling import SMOTE
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import datetime
+from svm import Svm
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost/pemilu-sentimen-analysis'
+db.init_app(app)
 app.secret_key = 'your_secret_key'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -51,7 +55,7 @@ def home():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return session.query(UserModel).get(int(user_id))
+    return UserModel.query.get(int(user_id))
 
 @app.before_request
 def before_request():
@@ -70,7 +74,7 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = session.query(UserModel).filter_by(email=email).first()
+        user = UserModel.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password, password):
             login_user(user)
@@ -103,6 +107,7 @@ def register():
             return redirect(url_for('login'))
     return render_template('register.html')
 
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -112,8 +117,9 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    countTraining = session.query(TrainingModel).count()
-    return render_template('dashboard.html', countTraining=countTraining)
+    countTraining = TrainingModel.query.count()
+    countTesting = TestingModel.query.count()
+    return render_template('dashboard.html', countTraining=countTraining, countTesting=countTesting)
 
 
 @app.route('/training-data')
@@ -121,7 +127,7 @@ def dashboard():
 def training_data():
     if current_user.role == 'user':
         return redirect(url_for('dashboard'))
-    data = session.query(TrainingModel).all()
+    data = TrainingModel.query.all()
     return render_template('trainingData.html', data=data)
 
 
@@ -142,12 +148,13 @@ def upload_data_training():
                 session.execute(text('TRUNCATE TABLE preprocessing'))
                 session.commit()
                 df = pd.read_csv(file)
+                df.drop_duplicates(subset=['teks'], inplace=True)
 
-                if 'teks' in df.columns and 'label' in df.columns and 'sosmed' in df.columns:
+                if 'teks' in df.columns and 'label' in df.columns:
                     for _, row in df.iterrows():
                         df.fillna('', inplace=True)
                         # Membuat objek model dan menyimpannya ke database
-                        data = TrainingModel(teks=row['teks'], label=row['label'], sosmed=row['sosmed'])
+                        data = TrainingModel(teks=row['teks'], label=row['label'])
                         session.add(data)
 
                     session.commit()
@@ -165,7 +172,7 @@ def upload_data_training():
 @app.route('/preprocessing-proses')
 @login_required
 def preprocessing_proses():
-    data = session.query(TrainingModel).all()
+    data = TrainingModel.query.all()
     session.execute(text('TRUNCATE TABLE preprocessing'))
     session.commit()
     # Melakukan preprocessing pada data
@@ -187,7 +194,7 @@ def preprocessing_proses():
 @app.route('/preprocessing-training')
 @login_required
 def preprocessing():
-    data = session.query(PreprocessingModel).all()
+    data = PreprocessingModel.query.all()
     return render_template('preprocessing.html', data=data)
 
 
@@ -196,7 +203,7 @@ def preprocessing():
 def tfidf_proses():
     session.execute(text('TRUNCATE TABLE tfidf'))
     session.commit()
-    data = session.query(PreprocessingModel).all()
+    data = PreprocessingModel.query.all()
 
     for item in data:
         teks = item.hasil
@@ -227,80 +234,11 @@ def tfidf_proses():
     return redirect(url_for('tfidf'))
 
 
-@app.route('/tfidf-proses1')
-def tfidf_proses1():
-    data = session.query(PreprocessingModel).all()
-
-    # Ekstrak teks dari data
-    corpus = [item.hasil for item in data]
-
-    # Buat objek TfidfVectorizer
-    tfidf_vectorizer = TfidfVectorizer()
-
-    # Hitung TF-IDF
-    tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
-
-    # Hitung IDF dari seluruh corpus
-    idf_values = tfidf_vectorizer.idf_
-
-    # Persiapan untuk menyimpan hasil sebagai dictionary
-    tfidf_data = []
-
-    # Hitung nilai TF, IDF, dan skor TF-IDF
-    for i, item in enumerate(data):
-        tfidf_scores = tfidf_matrix[i].toarray()[0]
-
-        tfidf_item = {"document_id": item.id, "tfidf_scores": {}, "tf": {}, "idf": {}}
-
-        for j, term in enumerate(tfidf_vectorizer.get_feature_names_out()):
-            tf_score = tfidf_scores[j]
-            idf_score = idf_values[j]
-
-            # Hitung skor TF-IDF
-            tfidf_score = tf_score * idf_score
-
-            tfidf_item["tf"][term] = tf_score
-            tfidf_item["idf"][term] = idf_score
-            tfidf_item["tfidf_scores"][term] = tfidf_score
-
-        tfidf_data.append(tfidf_item)
-
-    return jsonify(tfidf_data)
-
-
-@app.route('/tfidf-proses2')
-def tfidf_proses2():
-    data = session.query(PreprocessingModel).all()
-
-    tfidf_results = []
-
-    # Ekstrak teks dari semua dokumen
-    corpus = [item.hasil for item in data]
-
-    # Buat objek TfidfVectorizer dengan semua term dalam korpus
-    tfidf_vectorizer = TfidfVectorizer()
-    tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
-
-    # Dapatkan nama term (kata)
-    terms = tfidf_vectorizer.get_feature_names_out()
-
-    for doc_index, text in enumerate(corpus):
-        tfidf_scores = tfidf_matrix[doc_index].toarray()[0]
-
-        # Menggabungkan kata, indeks dokumen, dan bobot
-        result_items = [{"term": term, "document_id": doc_index, "tfidf_score": tfidf_score}
-                        for term, tfidf_score in zip(terms, tfidf_scores)]
-
-        tfidf_results.extend(result_items)
-
-    return jsonify(tfidf_results)
-
-
 @app.route('/klasifikasi-training')
 @login_required
 def klasifikasisvm():
     # Ambil data dari database
-    preprocessingData = session.query(PreprocessingModel).all()
+    preprocessingData = PreprocessingModel.query.all()
     session.execute(text('TRUNCATE TABLE klasifikasi_training'))
 
     teks = [item.teks for item in preprocessingData]
@@ -320,7 +258,8 @@ def klasifikasisvm():
     X_train, X_test, y_train, y_test = train_test_split(tfidf_matrix, labels, test_size=0.2, random_state=0)
 
     # Train the SVM model on the resampled data
-    linear = SVC(kernel="linear")
+
+    linear = SVC(kernel="linear", C=1.0, random_state=0)
     model = linear.fit(X_train, y_train)
 
     # Menyimpan model SVM linear ke dalam file
@@ -346,22 +285,42 @@ def klasifikasisvm():
         data = KlasifikasiTrainingModel(teks=teks[i], label=labels[i], hasil_klasifikasi=hasil_linear_train[i])
         session.add(data)
 
+    # count true positive, true negative, false positive, false negative
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
     data = []
     for i in range(len(labels)):
+        if labels[i] == -1 and hasil_linear_train[i] == -1:  # true negative
+            tn += 1
+        elif labels[i] == 1 and hasil_linear_train[i] == 1:  # true positive
+            tp += 1
+        elif labels[i] == -1 and hasil_linear_train[i] == 1:  # false positive
+            fp += 1
+        elif labels[i] == 1 and hasil_linear_train[i] == -1:  # false negative
+            fn += 1
         data.append({
             'teks': teks[i],
             'label': "Kebencian" if labels[i] == -1 else "Non-Kebencian",
-            'hasil': "Kebencian" if hasil_linear_train[i] == -1 else "Non-Kebencian"
+            'hasil': "Kebencian" if hasil_linear_train[i] == -1 else "Non-Kebencian",
         })
+    print(f'True Positive (TP): {tp}')
+    print(f'True Negative (TN): {tn}')
+    print(f'False Positive (FP): {fp}')
+    print(f'False Negative (FN): {fn}')
+    print(len(labels))
 
-    return render_template('klasifikasiTraining.html', data=data)
+    return render_template('klasifikasiTraining.html', data=data, true_positive=tp, true_negative=tn, false_positive=fp, false_negative=fn)
 
-
-@app.route('/klasifikasisvm1')
-def klasifikasisvm1():
+@app.route('/klasifikasi-training-buat')
+@login_required
+def klasifikasisvmBuat():
     # Ambil data dari database
-    preprocessingData = session.query(PreprocessingModel).all()
+    preprocessingData = PreprocessingModel.query.all()
+    session.execute(text('TRUNCATE TABLE klasifikasi_training'))
 
+    teks = [item.teks for item in preprocessingData]
     corpus = [item.hasil for item in preprocessingData]
     labels = [item.label for item in preprocessingData]
 
@@ -371,123 +330,68 @@ def klasifikasisvm1():
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
 
-    # Apply SMOTE to balance the dataset
-    smote = SMOTE(random_state=0)
-    X_resampled, y_resampled = smote.fit_resample(tfidf_matrix, labels)
-
-    # count y_resampled if 1 and -1
-    # print(X_resampled, y_resampled)
-    # print(y_resampled.count(1))
-    # print(y_resampled.count(-1))
-
-    # print("before resample")
-    # print(labels.count(1))
-    # print(labels.count(-1))
+    with open('tfidf_vectorizer.pkl', 'wb') as tfidf_vectorizer_file:
+        pickle.dump(tfidf_vectorizer, tfidf_vectorizer_file)
 
     # Split the resampled data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(tfidf_matrix, labels, test_size=0.2, random_state=0)
+    X_train_dense = X_train.toarray()
 
-    print(X_test, y_test)
+    # Ganti penggunaan SVC dengan Svm
+    svm_model = Svm()
+    model = svm_model.train(X_train_dense, y_train)
 
-    # Train the SVM model on the resampled data
-    linear = SVC(kernel="linear")
-    model = linear.fit(X_train, y_train)
-
-    # Menyimpan model SVM linear ke dalam file
-    with open('svm_linear_model.pkl', 'wb') as model_file:
-        pickle.dump(model, model_file)
+    # Menyimpan model SVM buatan ke dalam file
+    with open('svm_model.pkl', 'wb') as model_file:
+        pickle.dump(svm_model, model_file)
 
     # Memuat kembali model yang telah disimpan
-    with open('svm_linear_model.pkl', 'rb') as model_file:
-        loaded_linear_model = pickle.load(model_file)
+    with open('svm_model.pkl', 'rb') as model_file:
+        loaded_svm_model = pickle.load(model_file)
 
-    # Mendapatkan label prediksi dari model yang telah dimuat
-    hasil_linear = loaded_linear_model.predict(X_test)
-
-    # Menghitung metrik kinerja
-    accuracy = accuracy_score(y_test, hasil_linear)
-    precision = precision_score(y_test, hasil_linear)
-    recall = recall_score(y_test, hasil_linear)
-    f1 = f1_score(y_test, hasil_linear)
-    cm = confusion_matrix(y_test, hasil_linear)
-
-    data = []
-    for i in range(len(y_test)):
-        data.append({
-            'teks': corpus[i],
-            'label_asli': y_test[i],
-            'hasil_linear': hasil_linear[i]
-        })
-
-    # Siapkan respons JSON
-    response = {
-        'data': data,
-        'metrics': {
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'f1': f1,
-            'confusion_matrix': cm.tolist()
-        }
-    }
-
-    # return jsonify(response)
-    return 'sukses'
-
-
-@app.route('/klasifikasisvm2')
-def klasifikasisvm2():
-    # Ambil data dari database
-    preprocessingData = session.query(PreprocessingModel).all()
-
-    corpus = [item.hasil for item in preprocessingData]
-    labels = [item.label for item in preprocessingData]
-
-    # Perbarui label 'Kebencian' menjadi -1 dan 'Non-Kebencian' menjadi 1
-    labels = [1 if label == 'Non-Kebencian' else -1 for label in labels]
-
-    # Load the TF-IDF vectorizer and SVM model
+    # buka file tfidf vectorizer
     with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
         loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
-
-    with open('svm_linear_model.pkl', 'rb') as model_file:
-        loaded_linear_model = pickle.load(model_file)
 
     # Transform the training data using the loaded TF-IDF vectorizer
     X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
 
     # Predict on the training data using the loaded SVM model
-    hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+    hasil_svm_train = loaded_svm_model.predict(X_train_transformed)
 
-    # Calculate performance metrics on the training data
-    accuracy_train = accuracy_score(labels, hasil_linear_train)
-    precision_train = precision_score(labels, hasil_linear_train)
-    recall_train = recall_score(labels, hasil_linear_train)
-    f1_train = f1_score(labels, hasil_linear_train)
-    cm_train = confusion_matrix(labels, hasil_linear_train)
+    # save data to database
+    for i in range(len(labels)):
+        data = KlasifikasiTrainingModel(teks=teks[i], label=labels[i], hasil_klasifikasi=hasil_svm_train[i])
+        session.add(data)
 
-    # Prepare data for JSON response
-    data_train = []
-    for i in range(len(corpus)):
-        data_train.append({
-            'teks': corpus[i],
-            'label_asli': 'Kebencian' if labels[i] == -1 else 'Non-Kebencian',
-            'hasil_linear_train': 'Kebencian' if hasil_linear_train[i] == -1 else 'Non-Kebencian'
+    # count true positive, true negative, false positive, false negative
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    data = []
+    for i in range(len(labels)):
+        if labels[i] == -1 and hasil_svm_train[i] == -1:  # true negative
+            tn += 1
+        elif labels[i] == 1 and hasil_svm_train[i] == 1:  # true positive
+            tp += 1
+        elif labels[i] == -1 and hasil_svm_train[i] == 1:  # false positive
+            fp += 1
+        elif labels[i] == 1 and hasil_svm_train[i] == -1:  # false negative
+            fn += 1
+        data.append({
+            'teks': teks[i],
+            'label': "Kebencian" if labels[i] == -1 else "Non-Kebencian",
+            'hasil': "Kebencian" if hasil_svm_train[i] == -1 else "Non-Kebencian",
         })
+    print(f'True Positive (TP): {tp}')
+    print(f'True Negative (TN): {tn}')
+    print(f'False Positive (FP): {fp}')
+    print(f'False Negative (FN): {fn}')
+    print(len(labels))
 
-    # Prepare JSON response for training data
-    response_train = {
-        'data_train': data_train,
-        'metrics_train': {
-            'accuracy_train': accuracy_train,
-            'precision_train': precision_train,
-            'recall_train': recall_train,
-            'f1_train': f1_train,
-            'confusion_matrix_train': cm_train.tolist()
-        }
-    }
+    return render_template('klasifikasiTraining.html', data=data, true_positive=tp, true_negative=tn, false_positive=fp, false_negative=fn)
 
-    return jsonify(response_train)
 
 
 @app.route('/cek-kalimat')
@@ -519,19 +423,21 @@ def cek_kalimat():
 
     hasil = "Kebencian" if hasil_linear[0] == -1 else 'Non-Kebencian'
 
+    badge = "badge-danger" if hasil_linear[0] == -1 else 'badge-success'
+
     # return jsonify({
     #     'teks': teks,
     #     'preprocessed_text': preprocessed_text,
     #     'hasil_linear': 'Kebencian' if hasil_linear[0] == -1 else 'Non-Kebencian'
     # })
 
-    return render_template('cekKalimat.html', teks=teks, preprocessed_text=preprocessed_text, hasil=hasil)
+    return render_template('cekKalimat.html', teks=teks, preprocessed_text=preprocessed_text, hasil=hasil, badge=badge)
 
 
 @app.route('/tfidf')
 @login_required
 def tfidf():
-    data = session.query(TFIDFModel).all()
+    data = TFIDFModel.query.all()
     tfidf = []
     for item in data:
         tfidf.append(
@@ -550,9 +456,11 @@ def tfidf():
 @app.route('/testing-data')
 @login_required
 def testing_data():
-    data = session.query(TestingModel).all()
+    data = TestingModel.query.all()
+    countKebencian = TestingModel.query.filter_by(hasil_klasifikasi='Kebencian').count()
+    countNonKebencian = TestingModel.query.filter_by(hasil_klasifikasi='Non-Kebencian').count()
 
-    return render_template('testingData.html', data=data)
+    return render_template('testingData.html', data=data, countKebencian=countKebencian, countNonKebencian=countNonKebencian)
 
 @app.route('/upload-data-testing', methods=['POST'])
 @login_required
@@ -685,15 +593,18 @@ def scrap_tweet():
         # save data to database
         for _, row in selected_columns.iterrows():
             hasil = "Kebencian" if row['hasil'] == -1 else 'Non-Kebencian'
-            data = ScrapingModel(teks=row['full_text'], hasil_klasifikasi=hasil, created_at=row['created_at'], preprocessing=row['preprocessed_text'])
+            data = ScrapingModel(teks=row['full_text'], hasil_klasifikasi=hasil, created_at=row['created_at'], preprocessing=row['preprocessed_text'], keyword=keyword)
             session.add(data)
 
         session.commit()
 
         return redirect(url_for('scrap_tweet'))
 
-    data = session.query(ScrapingModel).all()
-    return render_template('scrapTweet.html', data=data)
+    data = ScrapingModel.query.all()
+    keyword = ScrapingModel.query.first()
+    countKebencian = ScrapingModel.query.filter_by(hasil_klasifikasi='Kebencian').count()
+    countNonKebencian = ScrapingModel.query.filter_by(hasil_klasifikasi='Non-Kebencian').count()
+    return render_template('scrapTweet.html', data=data, countKebencian=countKebencian, countNonKebencian=countNonKebencian, keyword=keyword)
 
 
 @app.errorhandler(jinja2.exceptions.TemplateNotFound)

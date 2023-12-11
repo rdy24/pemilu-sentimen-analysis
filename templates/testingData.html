@@ -21,6 +21,12 @@
             </div>
           </div>
 
+          <div class="row d-flex justify-content-center align-content-center">
+            <div class="col-xl-6 col-md-6 mb-4">
+                <canvas id="myChart" width="400" height="200"></canvas>
+            </div>
+          </div>
+
           <!-- DataTales Example -->
           <div class="card shadow mb-4">
             <div class="card-header py-3">
@@ -65,4 +71,32 @@
 
     <!-- Page level custom scripts -->
     <script src="{{ url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Data yang akan digunakan untuk grafik
+        var data = {
+            labels: ['Kebencian', 'Non Kebencian'],
+            datasets: [{
+                label: 'Jumlah Data',
+                data: [{{ countKebencian }}, {{ countNonKebencian }}],
+                backgroundColor: ['red', 'green'],
+                borderWidth: 1,
+            }]
+        };
+
+        // Konfigurasi grafik
+        var options = {
+            responsive: true,
+            maintainAspectRatio: false,
+        };
+
+        // Menggambar grafik
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar', // Jenis grafik
+            data: data,
+            options: options,
+        });
+    </script>
 {% endblock %}

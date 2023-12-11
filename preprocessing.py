@@ -71,12 +71,10 @@ def stemming(text):
 
 
 # normalisasi
+normalisasi_kata_df = pd.read_csv('normalisasi-new.csv')
+normalisasi_kata_dict = dict(zip(normalisasi_kata_df['before'], normalisasi_kata_df['after']))
+
 def normalisasi(text):
-    normalisasi_kata = pd.read_csv('normalisasi.csv')
-    normalisasi_kata_dict = {}
+    return [normalisasi_kata_dict.get(word, word) for word in text]
 
-    for index, row in normalisasi_kata.iterrows():
-        if row[0] not in normalisasi_kata_dict:
-            normalisasi_kata_dict[row[0]] = row[1]
 
-    return [normalisasi_kata_dict[word] if word in normalisasi_kata_dict else word for word in text]

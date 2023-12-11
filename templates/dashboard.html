@@ -36,7 +36,7 @@
                   <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                       <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Data Testing</div>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800">500</div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">{{ countTesting }}</div>
                     </div>
                     <div class="col-auto">
                       <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
@@ -69,7 +69,7 @@
             labels: ['Data Training', 'Data Testing'],
             datasets: [{
                 label: 'Jumlah Data',
-                data: [{{ countTraining }}, 500],
+                data: [{{ countTraining }}, {{ countTesting }}],
                 backgroundColor: ['blue', 'green'],
                 borderWidth: 1,
             }]

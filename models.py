@@ -1,9 +1,11 @@
 from sqlalchemy import Column, Integer, String, Float
-from sqlalchemy.ext.declarative import declarative_base
+from flask_sqlalchemy import SQLAlchemy
 
-Base = declarative_base()
+# Base = declarative_base()
+db = SQLAlchemy()
 
-class TrainingModel(Base):
+
+class TrainingModel(db.Model):
     __tablename__ = 'training'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -11,7 +13,8 @@ class TrainingModel(Base):
     label = Column(String)
     sosmed = Column(String)
 
-class PreprocessingModel(Base):
+
+class PreprocessingModel(db.Model):
     __tablename__ = 'preprocessing'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -20,7 +23,8 @@ class PreprocessingModel(Base):
     label = Column(String)
     sosmed = Column(String)
 
-class TFIDFModel(Base):
+
+class TFIDFModel(db.Model):
     __tablename__ = 'tfidf'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -30,7 +34,8 @@ class TFIDFModel(Base):
     idf = Column(Float)
     tfidf = Column(Float)
 
-class UserModel(Base):
+
+class UserModel(db.Model):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -54,7 +59,8 @@ class UserModel(Base):
     def __str__(self):
         return f"User ID: {self.id}, Username: {self.username}, Role: {self.role}"
 
-class KlasifikasiTrainingModel(Base):
+
+class KlasifikasiTrainingModel(db.Model):
     __tablename__ = 'klasifikasi_training'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -62,7 +68,8 @@ class KlasifikasiTrainingModel(Base):
     label = Column(String)
     hasil_klasifikasi = Column(String)
 
-class TestingModel(Base):
+
+class TestingModel(db.Model):
     __tablename__ = 'testing'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -70,21 +77,24 @@ class TestingModel(Base):
     preprocessing = Column(String)
     hasil_klasifikasi = Column(String)
 
-class KlasifikasiTestingModel(Base):
+
+class KlasifikasiTestingModel(db.Model):
     __tablename__ = 'klasifikasi_testing'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     teks = Column(String)
     hasil_klasifikasi = Column(String)
 
-class PrepocessingTestingModel(Base):
+
+class PrepocessingTestingModel(db.Model):
     __tablename__ = 'preprocessing_testing'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     teks = Column(String)
     hasil = Column(String)
 
-class ScrapingModel(Base):
+
+class ScrapingModel(db.Model):
     __tablename__ = 'scraping_tweet'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
@@ -92,3 +102,4 @@ class ScrapingModel(Base):
     teks = Column(String)
     preprocessing = Column(String)
     hasil_klasifikasi = Column(String)
+    keyword = Column(String)

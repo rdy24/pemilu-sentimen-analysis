@@ -8,39 +8,45 @@
           <h1 class="h3 mb-2 text-gray-800">Cari Keyword</h1>
           <form action="scrap-tweet" class="mb-3" method="post">
               <input type="text" class="form-control" name="keyword">
-                <button type="submit" class="btn btn-primary mt-2">Cek</button>
+                <button type="submit" class="btn btn-primary mt-2">Cari</button>
           </form>
+
+          <div class="row d-flex justify-content-center align-content-center">
+            <div class="col-xl-6 col-md-6 mb-4">
+                <canvas id="myChart" width="400" height="200"></canvas>
+            </div>
+          </div>
 
           <!-- DataTales Example -->
             <div class="card shadow mb-4">
-            <div class="card-header py-3">
-              <h6 class="m-0 font-weight-bold text-primary">Hasil Klasifikasi Testing</h6>
+                <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">Hasil Klasifikasi Keyword {{ keyword.keyword }}</h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                      <thead>
+                              <tr>
+                                <th>No</th>
+                                <th>Teks</th>
+                                <th>Preprocessing</th>
+                                <th>Hasil Klasifikasi</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for row in data %}
+                              <tr>
+                                  <td>{{ loop.index }}</td>
+                                  <td>{{ row.teks }}</td>
+                                  <td>{{ row.preprocessing }}</td>
+                                  <td>{{ row.hasil_klasifikasi }}</td>
+                              </tr>
+                              {% endfor %}
+                          </tbody>
+                    </table>
+                  </div>
+                </div>
             </div>
-            <div class="card-body">
-              <div class="table-responsive">
-                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                  <thead>
-                          <tr>
-                            <th>No</th>
-                            <th>Teks</th>
-                            <th>Preprocessing</th>
-                            <th>Hasil Klasifikasi</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {% for row in data %}
-                          <tr>
-                              <td>{{ loop.index }}</td>
-                              <td>{{ row.teks }}</td>
-                              <td>{{ row.preprocessing }}</td>
-                              <td>{{ row.hasil_klasifikasi }}</td>
-                          </tr>
-                          {% endfor %}
-                      </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
 
         </div>
         <!-- /.container-fluid -->
@@ -58,4 +64,31 @@
 
     <!-- Page level custom scripts -->
     <script src="{{ url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Data yang akan digunakan untuk grafik
+        var data = {
+            labels: ['Kebencian', 'Non Kebencian'],
+            datasets: [{
+                label: 'Jumlah Data',
+                data: [{{ countKebencian }}, {{ countNonKebencian }}],
+                backgroundColor: ['red', 'green'],
+                borderWidth: 1,
+            }]
+        };
+
+        // Konfigurasi grafik
+        var options = {
+            responsive: true,
+            maintainAspectRatio: false,
+        };
+
+        // Menggambar grafik
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar', // Jenis grafik
+            data: data,
+            options: options,
+        });
+    </script>
 {% endblock %}
