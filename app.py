@@ -541,6 +541,9 @@ def scrap_tweet():
 
         search_keyword = f'{keyword} lang:id -filter:links -filter:replies'
 
+        if ' ' in keyword:
+            keyword = keyword.replace(' ', '_')
+
         now = datetime.datetime.now()
         filename = f'{keyword}-{now.strftime("%Y-%m-%d-%H-%M-%S")}.csv'
 
