@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import pickle
+import subprocess
 
 from flask import Flask, url_for, render_template, request, jsonify, redirect, flash, g
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -160,7 +161,7 @@ def upload_data_training():
                     session.commit()
                     return redirect(url_for('training_data'))
                 else:
-                    return jsonify({'error': 'Kolom "teks", "label", dan "sosmed" diperlukan dalam file CSV'})
+                    return jsonify({'error': 'Kolom "teks", "label", diperlukan dalam file CSV'})
             except Exception as e:
                 return jsonify({'error': f'Error: {str(e)}'})
         else:
@@ -173,8 +174,8 @@ def upload_data_training():
 @login_required
 def preprocessing_proses():
     data = TrainingModel.query.all()
-    session.execute(text('TRUNCATE TABLE preprocessing'))
-    session.commit()
+    # session.execute(text('TRUNCATE TABLE preprocessing'))
+    # session.commit()
     # Melakukan preprocessing pada data
     for item in data:
         cleaned_text = cleaning_text(item.teks)
@@ -185,7 +186,7 @@ def preprocessing_proses():
         stemmed_text = stemming(stopword_removed_text)
 
         # save data to database
-        data = PreprocessingModel(teks=item.teks, hasil=(" ").join(stemmed_text), sosmed=item.sosmed, label=item.label)
+        data = PreprocessingModel(teks=item.teks, hasil=(" ").join(stemmed_text), label=item.label)
         session.add(data)
         session.commit()
     return redirect(url_for('preprocessing'))
@@ -478,58 +479,74 @@ def upload_data_testing():
                 session.commit()
                 df = pd.read_csv(file)
 
-                if 'teks' in df.columns:
-                    preprocessed_texts = []
-                    for _, row in df.iterrows():
-                        df.fillna('', inplace=True)
+                # Check if at least one of the columns 'teks' or 'Comment' is present
+                required_columns = ['teks', 'Comment']
+                if not any(col in df.columns for col in required_columns):
+                    return jsonify({'error': 'Setidaknya satu dari kolom "teks" atau "Comment" diperlukan dalam file CSV'})
+
+                preprocessed_texts = []
+                for _, row in df.iterrows():
+                    row.fillna('', inplace=True)
+                    if 'teks' in df.columns:
                         cleaned = cleaning_text(row['teks'])
-                        lowercased = case_folding(cleaned)
-                        tokenized = tokenizing(lowercased)
-                        normalized = normalisasi(tokenized)
-                        stopword_removed = stopword_removal(normalized)
-                        stemmed = stemming(stopword_removed)
-                        preprocessed_text = (" ").join(stemmed)
-                        preprocessed_texts.append(preprocessed_text)
+                    elif 'Comment' in df.columns:
+                        cleaned = cleaning_text(row['Comment'])
+                    else:
+                        cleaned = ''
+                    lowercased = case_folding(cleaned)
+                    tokenized = tokenizing(lowercased)
+                    normalized = normalisasi(tokenized)
+                    stopword_removed = stopword_removal(normalized)
+                    stemmed = stemming(stopword_removed)
+                    preprocessed_text = (" ").join(stemmed)
+                    preprocessed_texts.append(preprocessed_text)
 
-                    #add column
-                    df['preprocessed_text'] = preprocessed_texts
+                # Add column
+                df['preprocessed_text'] = preprocessed_texts
 
-                    corpus = [item for item in preprocessed_texts]
+                corpus = [item for item in preprocessed_texts]
 
-                    # load model
-                    with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
-                        loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
+                # Load model
+                with open('tfidf_vectorizer.pkl', 'rb') as tfidf_vectorizer_file:
+                    loaded_tfidf_vectorizer = pickle.load(tfidf_vectorizer_file)
 
-                    # Transform the training data using the loaded TF-IDF vectorizer
-                    X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
+                # Transform the training data using the loaded TF-IDF vectorizer
+                X_train_transformed = loaded_tfidf_vectorizer.transform(corpus)
 
-                    # Memuat kembali model yang telah disimpan
-                    with open('svm_linear_model.pkl', 'rb') as model_file:
-                        loaded_linear_model = pickle.load(model_file)
+                # Load the saved SVM model
+                with open('svm_linear_model.pkl', 'rb') as model_file:
+                    loaded_linear_model = pickle.load(model_file)
 
-                    # Predict on the training data using the loaded SVM model
-                    hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
-                    df['hasil'] = hasil_linear_train
+                # Predict on the training data using the loaded SVM model
+                hasil_linear_train = loaded_linear_model.predict(X_train_transformed)
+                df['hasil'] = hasil_linear_train
 
-                    # truncate table
-                    session.execute(text('TRUNCATE TABLE testing'))
-                    # save data to database
-                    for _, row in df.iterrows():
-                        hasil = "Kebencian" if row['hasil'] == -1 else 'Non-Kebencian'
-                        data = TestingModel(teks=row['teks'], preprocessing=row['preprocessed_text'],hasil_klasifikasi=hasil)
-                        session.add(data)
+                # Truncate the 'testing' table
+                session.execute(text('TRUNCATE TABLE testing'))
 
-                    session.commit()
-                    return redirect(url_for('testing_data'))
-                else:
-                    return jsonify({'error': 'Kolom "teks", diperlukan dalam file CSV'})
+                # Save data to the 'testing' table
+                result_columns = ['teks', 'Comment', 'preprocessed_text', 'hasil']
+                for _, row in df.iterrows():
+                    hasil = "Kebencian" if row.get('hasil', -1) == -1 else 'Non-Kebencian'
+
+                    # Get the value of 'teks' or 'Comment' if present
+                    teks_value = row['teks'] if 'teks' in row.index else row[
+                        'Comment'] if 'Comment' in row.index else ''
+
+                    data = TestingModel(
+                        teks=teks_value,
+                        preprocessing=row.get('preprocessed_text', ''),
+                        hasil_klasifikasi=hasil
+                    )
+                    session.add(data)
+                session.commit()
+                return redirect(url_for('testing_data'))
             except Exception as e:
                 return jsonify({'error': f'Error: {str(e)}'})
         else:
             return jsonify({'error': 'File harus berformat CSV'})
     else:
         return jsonify({'error': 'Metode HTTP tidak valid, hanya mendukung POST'})
-
 
 @app.route('/scrap-tweet', methods=['POST', 'GET'])
 @login_required
@@ -549,13 +566,13 @@ def scrap_tweet():
 
         # Run the tweet harvesting code
         limit = 50
-        command = f'npx --yes tweet-harvest@2.2.8 -o "{filename}" -s "{search_keyword}" -l {limit} --token {twitter_auth_token}'
-        os.system(command)
-
+        command = f'npx --yes tweet-harvest@latest -o "{filename}" -s "{search_keyword}" -l {limit} --token {twitter_auth_token}'
+        # os.system(command)
+        subprocess.run(command, shell=True)
         file_path = f'tweets-data/{filename}'
 
         # Read the CSV file into a Pandas DataFrame
-        df = pd.read_csv(file_path, delimiter=';')
+        df = pd.read_csv(file_path, delimiter=',')
 
         selected_columns = df[['created_at', 'full_text']]
 
@@ -563,7 +580,6 @@ def scrap_tweet():
 
         # preprocessing
         for _, row in selected_columns.iterrows():
-            df.fillna('', inplace=True)
             cleaned = cleaning_text(row['full_text'])
             lowercased = case_folding(cleaned)
             tokenized = tokenizing(lowercased)

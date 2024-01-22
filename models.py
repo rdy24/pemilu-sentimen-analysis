@@ -11,7 +11,6 @@ class TrainingModel(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     teks = Column(String)
     label = Column(String)
-    sosmed = Column(String)
 
 
 class PreprocessingModel(db.Model):
@@ -21,7 +20,6 @@ class PreprocessingModel(db.Model):
     teks = Column(String)
     hasil = Column(String)
     label = Column(String)
-    sosmed = Column(String)
 
 
 class TFIDFModel(db.Model):
